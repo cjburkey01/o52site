@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- Metadata -->
+        <meta charset="utf-8" />
+
+        <title>O*52 RECORDS</title>
+
+        <!-- Page styling -->
+        <style>
+            body {
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Make sure stuff runs well in more places :shrug: -->
+        <script src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+        <!-- Three.js -->
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://unpkg.com/three@0.144.0/build/three.module.js"
+                }
+            }
+        </script>
+        <!-- Page script -->
+        <script type="module">
+            // Initialize Three.js
+            import * as THREE from 'three';
+			import { OBJLoader } from './js/OBJLoader.js';
+
+            // Create the scene and camera to render
+            console.log('Initializing O*52 spinny render scene thing!');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 200;
+
+            // Create the renderer
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // Mesh material
+            const material = new THREE.MeshPhongMaterial({
+				color: 0x443B13,
+                specular: 0xE4DAAF,
+				shininess: 100,
+			});
+
+            // Lights
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+			dirLight.position.set(0, 0, 1);
+			scene.add(dirLight);
+            //const pointLight = new THREE.DirectionalLight(0xffffff, 0.5);
+			//pointLight.position.set(-1, 0, 1);
+			//scene.add(pointLight);
+
+            // Model loading handler
+            let objModel;
+            function loadModel() {
+    			objModel.traverse(child => {
+    				if (child.isMesh) {
+                        child.material = material;
+
+                        // Center
+                        let center = new THREE.Vector3();
+                        child.geometry.computeBoundingBox();
+                        child.geometry.boundingBox.getCenter(center);
+                        child.position.x -= center.x;
+                        child.position.y -= center.y;
+                    }
+    			});
+    			scene.add(objModel);
+    		}
+    		const manager = new THREE.LoadingManager(loadModel);
+
+            // Load the model
+            const loader = new OBJLoader(manager);
+			loader.load('obj/o52mesh.obj', obj => {
+				objModel = obj;
+			}, prog => {
+    			if (prog.lengthComputable) {
+    				const percentComplete = prog.loaded / prog.total * 100;
+    				console.log(`${Math.round(percentComplete, 2)}% loaded`);
+    			}
+    		}, () => console.error('Failed to load O*52 spinny mesh!'));
+
+            // Resize handler
+			let windowHalfX = window.innerWidth / 2;
+			let windowHalfY = window.innerHeight / 2;
+            window.addEventListener('resize', () => {
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			});
+
+            // Start rendering!
+            let lastRenderTime = 0;
+            function animate(currentTime) {
+                // Calculate delta time
+                let deltaTime = currentTime - lastRenderTime;
+                lastRenderTime = currentTime;
+                let deltaSecs = deltaTime / 1000.0;
+
+                if (objModel != null) {
+                    objModel.rotation.y += Math.PI * deltaSecs;
+                }
+
+                // Request next frame
+            	requestAnimationFrame(animate);
+            	renderer.render(scene, camera);
+            }
+            console.log('Finished setting up scene!');
+            requestAnimationFrame(animate);
+        </script>
+    </body>
+</html>
